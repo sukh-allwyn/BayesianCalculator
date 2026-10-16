@@ -1,0 +1,867 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bayesian A/B Testing Calculator</title>
+    <style>
+      :root {
+        --ink: #0f172a;
+        --muted: #64748b;
+        --line: #dbe2ea;
+        --surface: #ffffff;
+        --background: #f8fafc;
+        --brand: #4f46e5;
+        --brand-dark: #4338ca;
+        --success-bg: #ecfdf5;
+        --success-line: #a7f3d0;
+        --success-text: #047857;
+        --warning-bg: #fffbeb;
+        --warning-line: #fde68a;
+        --warning-text: #a16207;
+        --pastel-1: #cbd5e1;
+        --pastel-2: #c7d2fe;
+        --pastel-3: #a5f3fc;
+        --pastel-4: #ddd6fe;
+        --pastel-5: #fde68a;
+        --pastel-6: #a7f3d0;
+        --pastel-7: #fbcfe8;
+        --pastel-8: #bfdbfe;
+        --pastel-9: #99f6e4;
+        --pastel-10: #fed7aa;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      .page-shell {
+        width: min(100% - 32px, 1152px);
+        margin: 0 auto;
+        padding: 32px 0;
+      }
+      .hero {
+        padding: 28px;
+        border-radius: 18px;
+        color: white;
+        background: linear-gradient(135deg, #020617, #312e81);
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+      }
+      .hero h1 {
+        margin: 6px 0 10px;
+        font-size: clamp(2rem, 5vw, 2.6rem);
+        line-height: 1.1;
+      }
+      .hero > p:last-child {
+        max-width: 780px;
+        margin: 0;
+        color: #cbd5e1;
+        line-height: 1.65;
+      }
+      .eyebrow {
+        margin: 0;
+        color: #a5b4fc;
+        font-size: 0.8rem;
+        font-weight: 800;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+      .panel {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--surface);
+        box-shadow: 0 5px 20px rgba(15, 23, 42, 0.06);
+      }
+      .input-heading {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+      .input-heading h2 {
+        margin-bottom: 4px;
+      }
+      .input-heading p {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .threshold-field {
+        color: #334155;
+        font-size: 0.86rem;
+        font-weight: 750;
+      }
+      .threshold-field span {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
+      }
+      .threshold-field input {
+        width: 92px;
+      }
+      .variants {
+        display: grid;
+        gap: 12px;
+      }
+      .variant-row {
+        display: grid;
+        grid-template-columns: minmax(170px, 1.4fr) minmax(130px, 1fr) minmax(
+            130px,
+            1fr
+          ) auto;
+        align-items: end;
+        gap: 12px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #f8fafc;
+      }
+      label {
+        color: #334155;
+        font-size: 0.86rem;
+        font-weight: 750;
+      }
+      input {
+        width: 100%;
+        margin-top: 6px;
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        background: white;
+        color: var(--ink);
+        outline: none;
+      }
+      input:focus {
+        border-color: #818cf8;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+      }
+      input:disabled {
+        background: #f1f5f9;
+        color: #475569;
+      }
+      .button {
+        min-height: 42px;
+        padding: 10px 16px;
+        border: 0;
+        border-radius: 11px;
+        font-weight: 750;
+        cursor: pointer;
+      }
+      .button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+      .primary {
+        color: white;
+        background: var(--brand);
+      }
+      .primary:hover {
+        background: var(--brand-dark);
+      }
+      .secondary {
+        color: #334155;
+        border: 1px solid #cbd5e1;
+        background: white;
+      }
+      .ghost,
+      .remove {
+        color: #64748b;
+        background: transparent;
+      }
+      .remove {
+        padding: 10px;
+        border: 0;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      .remove:not(:disabled):hover {
+        color: #dc2626;
+        background: #fef2f2;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 18px;
+      }
+      .error {
+        display: none;
+        margin-top: 14px;
+        padding: 11px 13px;
+        border-radius: 10px;
+        color: #b91c1c;
+        background: #fef2f2;
+        font-size: 0.9rem;
+        font-weight: 650;
+      }
+      .results {
+        margin-top: 24px;
+      }
+      .hidden {
+        display: none;
+      }
+      .decision-summary {
+        padding: 18px 20px;
+        border: 1px solid;
+        border-radius: 16px;
+      }
+      .decision-summary strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+      .decision-summary.success {
+        color: var(--success-text);
+        border-color: var(--success-line);
+        background: var(--success-bg);
+      }
+      .decision-summary.warning {
+        color: var(--warning-text);
+        border-color: var(--warning-line);
+        background: var(--warning-bg);
+      }
+      .visualisation {
+        margin-top: 24px;
+      }
+      .visualisation > h2 {
+        margin-bottom: 14px;
+      }
+      .charts {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+        width: 100%;
+      }
+      .chart-card {
+        width: 100%;
+        min-width: 0;
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: white;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+      }
+      .chart-card h3 {
+        margin-bottom: 4px;
+        font-size: 1rem;
+      }
+      .chart-card > p {
+        margin-bottom: 12px;
+        color: var(--muted);
+        font-size: 0.76rem;
+        line-height: 1.5;
+      }
+      .chart {
+        position: relative;
+        width: 100%;
+        height: 170px;
+      }
+      .chart svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+      .grid-line {
+        stroke: #e2e8f0;
+        stroke-dasharray: 3 3;
+      }
+      .axis-line {
+        stroke: #94a3b8;
+      }
+      .axis-label {
+        fill: #475569;
+        font-size: 11px;
+      }
+      .bar-label {
+        fill: #334155;
+        font-size: 12px;
+        font-weight: 650;
+      }
+      .value-label {
+        fill: #334155;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .reference-line {
+        stroke: #e8798b;
+        stroke-width: 1.5;
+        stroke-dasharray: 5 5;
+      }
+      .zero-line {
+        stroke: #64748b;
+        stroke-width: 1.25;
+      }
+      .table-shell {
+        margin-top: 20px;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: white;
+      }
+      table {
+        width: 100%;
+        min-width: 920px;
+        border-collapse: collapse;
+        font-size: 0.86rem;
+      }
+      th,
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+      }
+      th {
+        color: white;
+        background: #020617;
+      }
+      tbody tr:hover {
+        background: #f8fafc;
+      }
+      .method {
+        color: #475569;
+        font-size: 0.86rem;
+        line-height: 1.65;
+      }
+      .method h3 {
+        color: var(--ink);
+        margin-bottom: 5px;
+      }
+      .method p {
+        margin-bottom: 0;
+      }
+
+      @media (max-width: 720px) {
+        .page-shell {
+          width: min(100% - 20px, 1152px);
+          padding: 12px 0 24px;
+        }
+        .hero,
+        .panel {
+          padding: 20px;
+        }
+        .input-heading {
+          align-items: stretch;
+          flex-direction: column;
+        }
+        .variant-row {
+          grid-template-columns: 1fr 1fr;
+        }
+        .variant-row label:first-child {
+          grid-column: 1 / -1;
+        }
+        .chart-card {
+          padding: 16px 12px;
+        }
+        .chart {
+          height: 160px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">Experiment analysis</p>
+        <h1>Bayesian A/B testing calculator</h1>
+        <p>
+          Compare binary conversion outcomes using Beta-Binomial posteriors. Add
+          up to ten variants, choose a winning threshold and compare every
+          treatment with the unchanged control.
+        </p>
+      </header>
+
+      <section class="panel input-panel">
+        <div class="input-heading">
+          <div>
+            <h2>Experiment data</h2>
+            <p>Samples must be equal to or greater than conversions.</p>
+          </div>
+          <label class="threshold-field"
+            >Winner threshold
+            <span
+              ><input
+                id="threshold"
+                type="number"
+                min="75"
+                max="99.9"
+                step="0.1"
+                value="95"
+              />
+              %</span
+            >
+          </label>
+        </div>
+
+        <div id="variants" class="variants"></div>
+        <div id="error" class="error" role="alert"></div>
+
+        <div class="actions">
+          <button id="addVariant" class="button secondary" type="button">
+            + Add variant
+          </button>
+          <button id="calculate" class="button primary" type="button">
+            Calculate
+          </button>
+          <button id="reset" class="button ghost" type="button">Reset</button>
+        </div>
+      </section>
+
+      <section id="results" class="results hidden" aria-live="polite">
+        <div id="decisionSummary" class="decision-summary"></div>
+
+        <section class="visualisation">
+          <h2>Outcome visualisation</h2>
+          <div id="charts" class="charts"></div>
+        </section>
+
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Variant</th>
+                <th>Samples</th>
+                <th>Conversions</th>
+                <th>Conversion rate</th>
+                <th>Probability best</th>
+                <th>Beats control</th>
+                <th>Expected loss</th>
+                <th>95% uplift interval</th>
+              </tr>
+            </thead>
+            <tbody id="resultRows"></tbody>
+          </table>
+        </div>
+
+        <aside class="panel method">
+          <h3>Method and decision guardrails</h3>
+          <p>
+            The calculator uses a uniform Beta(1,1) prior and 100,000 Monte
+            Carlo draws from each Beta posterior. “Probability best” is the
+            share of simulations in which a variant has the highest sampled
+            conversion rate. Reaching the probability threshold is a decision
+            signal, not a guarantee. Also apply a pre-agreed minimum runtime,
+            sample requirement, primary metric and practical uplift threshold
+            before ending a test.
+          </p>
+        </aside>
+      </section>
+    </main>
+    <script>
+      (() => {
+        const ITERATIONS = 100000;
+        const PASTELS = [
+          '#CBD5E1',
+          '#C7D2FE',
+          '#A5F3FC',
+          '#DDD6FE',
+          '#FDE68A',
+          '#A7F3D0',
+          '#FBCFE8',
+          '#BFDBFE',
+          '#99F6E4',
+          '#FED7AA',
+        ];
+        let variants = [];
+
+        const $ = (selector) => document.querySelector(selector);
+        const id = () =>
+          crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+        const defaults = () => [
+          {
+            id: id(),
+            name: 'Control',
+            samples: 8500,
+            conversions: 1410,
+            isControl: true,
+          },
+          {
+            id: id(),
+            name: 'Variant A',
+            samples: 8500,
+            conversions: 1500,
+            isControl: false,
+          },
+        ];
+        const percent = (value, digits = 2) =>
+          `${(value * 100).toFixed(digits)}%`;
+        const xml = (value) =>
+          String(value).replace(
+            /[&<>"']/g,
+            (char) =>
+              ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;',
+              })[char],
+          );
+
+        function renderVariants() {
+          $('#variants').innerHTML = variants
+            .map(
+              (variant) => `
+      <div class="variant-row" data-id="${variant.id}">
+        <label>Variant
+          <input data-field="name" type="text" value="${xml(variant.name)}" ${variant.isControl ? 'disabled' : ''}>
+        </label>
+        <label>Samples
+          <input data-field="samples" type="number" min="0" step="1" value="${variant.samples}">
+        </label>
+        <label>Conversions
+          <input data-field="conversions" type="number" min="0" step="1" value="${variant.conversions}">
+        </label>
+        <button class="remove" type="button" ${variant.isControl ? 'disabled' : ''} aria-label="Remove ${xml(variant.name)}">Remove</button>
+      </div>`,
+            )
+            .join('');
+        }
+
+        function readInputs() {
+          document.querySelectorAll('.variant-row').forEach((row) => {
+            const variant = variants.find((item) => item.id === row.dataset.id);
+            row.querySelectorAll('input').forEach((input) => {
+              variant[input.dataset.field] =
+                input.dataset.field === 'name'
+                  ? input.value.trim()
+                  : Number(input.value);
+            });
+          });
+        }
+
+        function normalSample() {
+          let u = 0,
+            v = 0;
+          while (u === 0) u = Math.random();
+          while (v === 0) v = Math.random();
+          return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+        }
+
+        function gammaSample(shape) {
+          if (shape < 1)
+            return gammaSample(shape + 1) * Math.pow(Math.random(), 1 / shape);
+          const d = shape - 1 / 3;
+          const c = 1 / Math.sqrt(9 * d);
+          while (true) {
+            let x, v;
+            do {
+              x = normalSample();
+              v = 1 + c * x;
+            } while (v <= 0);
+            v = v * v * v;
+            const u = Math.random();
+            if (u < 1 - 0.0331 * Math.pow(x, 4)) return d * v;
+            if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v)))
+              return d * v;
+          }
+        }
+
+        function betaSample(alpha, beta) {
+          const x = gammaSample(alpha);
+          const y = gammaSample(beta);
+          return x / (x + y);
+        }
+
+        function calculateBayesianResults() {
+          const controlIndex = variants.findIndex(
+            (variant) => variant.isControl,
+          );
+          const wins = variants.map(() => 0);
+          const beatsControl = variants.map(() => 0);
+          const losses = variants.map(() => 0);
+          const upliftSamples = variants.map(() => []);
+
+          for (let iteration = 0; iteration < ITERATIONS; iteration++) {
+            const rates = variants.map((variant) =>
+              betaSample(
+                variant.conversions + 1,
+                variant.samples - variant.conversions + 1,
+              ),
+            );
+            const controlRate = rates[controlIndex];
+            let bestIndex = 0;
+            for (let index = 1; index < rates.length; index++)
+              if (rates[index] > rates[bestIndex]) bestIndex = index;
+            wins[bestIndex]++;
+            const bestRate = rates[bestIndex];
+            rates.forEach((rate, index) => {
+              if (index === controlIndex || rate > controlRate)
+                beatsControl[index]++;
+              losses[index] += bestRate > 0 ? (bestRate - rate) / bestRate : 0;
+              if (index !== controlIndex && controlRate > 0)
+                upliftSamples[index].push((rate - controlRate) / controlRate);
+            });
+          }
+
+          return variants.map((variant, index) => {
+            const sorted = upliftSamples[index].sort((a, b) => a - b);
+            return {
+              ...variant,
+              conversionRate: variant.conversions / variant.samples,
+              probabilityBest: wins[index] / ITERATIONS,
+              probabilityBeatControl: beatsControl[index] / ITERATIONS,
+              expectedLoss: losses[index] / ITERATIONS,
+              upliftInterval: sorted.length
+                ? [
+                    sorted[Math.floor(sorted.length * 0.025)],
+                    sorted[Math.floor(sorted.length * 0.975)],
+                  ]
+                : [0, 0],
+            };
+          });
+        }
+
+        function validate() {
+          if (variants.length < 2)
+            return 'Add at least one variant alongside the control.';
+          for (const variant of variants) {
+            if (!variant.name) return 'Every variant needs a name.';
+            if (
+              !Number.isInteger(variant.samples) ||
+              !Number.isInteger(variant.conversions)
+            )
+              return 'Samples and conversions must be whole numbers.';
+            if (variant.samples <= 0)
+              return `${variant.name} must have at least one sample.`;
+            if (
+              variant.conversions < 0 ||
+              variant.conversions > variant.samples
+            )
+              return `${variant.name} cannot have more conversions than samples.`;
+          }
+          return '';
+        }
+
+        function niceTicks(max, count = 5) {
+          if (max <= 0) return [0, 1];
+          const raw = max / count;
+          const power = Math.pow(10, Math.floor(Math.log10(raw)));
+          const fraction = raw / power;
+          const nice =
+            fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
+          const step = nice * power;
+          const ceiling = Math.ceil(max / step) * step;
+          return Array.from(
+            { length: Math.round(ceiling / step) + 1 },
+            (_, i) => i * step,
+          );
+        }
+
+        function horizontalChart({
+          title,
+          subtitle,
+          data,
+          valueKey,
+          maxValue,
+          reference,
+          colours = true,
+          interval = false,
+        }) {
+          const width = 1000,
+            height = 170,
+            left = 125,
+            right = 38,
+            top = 13,
+            bottom = 30;
+          const plotWidth = width - left - right;
+          const rowHeight = (height - top - bottom) / Math.max(data.length, 1);
+          const values = interval
+            ? data.flatMap((item) => [item.low, item.high])
+            : data.map((item) => item[valueKey]);
+          let min = interval ? Math.min(0, ...values) : 0;
+          let max = maxValue ?? Math.max(...values, 1);
+          if (interval) {
+            const padding = Math.max((max - min) * 0.08, 0.5);
+            min -= padding;
+            max += padding;
+          }
+          const x = (value) =>
+            left + ((value - min) / (max - min || 1)) * plotWidth;
+          const ticks = interval
+            ? Array.from({ length: 6 }, (_, i) => min + ((max - min) * i) / 5)
+            : niceTicks(max);
+          const grid = ticks
+            .map(
+              (tick) =>
+                `<line class="grid-line" x1="${x(tick)}" y1="${top}" x2="${x(tick)}" y2="${height - bottom}"/><text class="axis-label" x="${x(tick)}" y="${height - 8}" text-anchor="middle">${tick.toFixed(tick < 10 ? 1 : 0)}%</text>`,
+            )
+            .join('');
+          const refLine =
+            reference === undefined
+              ? ''
+              : `<line class="reference-line" x1="${x(reference)}" y1="${top}" x2="${x(reference)}" y2="${height - bottom}"/><text class="axis-label" x="${x(reference) - 4}" y="${top + 10}" text-anchor="end">${reference.toFixed(1)}%</text>`;
+          const zeroLine = interval
+            ? `<line class="zero-line" x1="${x(0)}" y1="${top}" x2="${x(0)}" y2="${height - bottom}"/>`
+            : '';
+          const bars = data
+            .map((item, index) => {
+              const cy = top + rowHeight * index + rowHeight / 2;
+              const barHeight = Math.min(18, rowHeight * 0.42);
+              const start = interval ? x(item.low) : x(0);
+              const end = interval ? x(item.high) : x(item[valueKey]);
+              const colour = interval
+                ? '#DDD6FE'
+                : colours
+                  ? PASTELS[index % PASTELS.length]
+                  : '#A5F3FC';
+              const valueText = interval
+                ? `${item.low.toFixed(2)}% to ${item.high.toFixed(2)}%`
+                : `${item[valueKey].toFixed(2)}%`;
+              return `<text class="bar-label" x="${left - 10}" y="${cy + 4}" text-anchor="end">${xml(item.name)}</text><rect x="${Math.min(start, end)}" y="${cy - barHeight / 2}" width="${Math.max(Math.abs(end - start), 1)}" height="${barHeight}" rx="6" fill="${colour}"><title>${xml(item.name)}: ${valueText}</title></rect><text class="value-label" x="${Math.max(start, end) + 7}" y="${cy + 4}">${valueText}</text>`;
+            })
+            .join('');
+          return `<article class="chart-card"><h3>${title}</h3><p>${subtitle}</p><div class="chart"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${title}">${grid}${refLine}${zeroLine}${bars}</svg></div></article>`;
+        }
+
+        function renderResults(results) {
+          const threshold = Number($('#threshold').value) / 100;
+          const winner = results.reduce((best, row) =>
+            row.probabilityBest > best.probabilityBest ? row : best,
+          );
+          const conclusive = winner.probabilityBest >= threshold;
+          $('#decisionSummary').className =
+            `decision-summary ${conclusive ? 'success' : 'warning'}`;
+          $('#decisionSummary').innerHTML =
+            `<strong>${conclusive ? `${xml(winner.name)} is the current winner` : 'No conclusive winner yet'}</strong><span>${xml(winner.name)} has a ${percent(winner.probabilityBest)} probability of being best. Decision threshold: ${(threshold * 100).toFixed(1)}%.</span>`;
+
+          const graphData = results.map((row) => ({
+            name: row.name,
+            conversionRate: row.conversionRate * 100,
+            probabilityBest: row.probabilityBest * 100,
+            probabilityBeatControl: row.probabilityBeatControl * 100,
+          }));
+          const upliftData = results
+            .filter((row) => !row.isControl)
+            .map((row) => ({
+              name: row.name,
+              low: row.upliftInterval[0] * 100,
+              high: row.upliftInterval[1] * 100,
+            }));
+
+          $('#charts').innerHTML = [
+            horizontalChart({
+              title: 'Conversion rate',
+              subtitle: 'Observed conversion rate for each experience.',
+              data: graphData,
+              valueKey: 'conversionRate',
+            }),
+            horizontalChart({
+              title: 'Probability to be best',
+              subtitle:
+                'Share of posterior simulations in which each variant wins.',
+              data: graphData,
+              valueKey: 'probabilityBest',
+              maxValue: 100,
+              reference: threshold * 100,
+            }),
+            horizontalChart({
+              title: 'Probability of beating control',
+              subtitle:
+                'Direct posterior comparison with the control experience.',
+              data: graphData.filter(
+                (_, index) =>
+                  index !== results.findIndex((row) => row.isControl),
+              ),
+              valueKey: 'probabilityBeatControl',
+              maxValue: 100,
+              reference: threshold * 100,
+              colours: false,
+            }),
+            horizontalChart({
+              title: '95% credible interval for uplift',
+              subtitle:
+                'Relative conversion-rate uplift versus control. Bars entirely to the right of 0% indicate stronger posterior evidence of positive uplift.',
+              data: upliftData,
+              interval: true,
+            }),
+          ].join('');
+
+          $('#resultRows').innerHTML = results
+            .map(
+              (row) =>
+                `<tr><td><strong>${xml(row.name)}${row.isControl ? ' (control)' : ''}</strong></td><td>${row.samples.toLocaleString('en-GB')}</td><td>${row.conversions.toLocaleString('en-GB')}</td><td>${percent(row.conversionRate, 3)}</td><td>${percent(row.probabilityBest)}</td><td>${row.isControl ? 'Reference' : percent(row.probabilityBeatControl)}</td><td>${percent(row.expectedLoss, 3)}</td><td>${row.isControl ? 'Reference' : `${percent(row.upliftInterval[0])} to ${percent(row.upliftInterval[1])}`}</td></tr>`,
+            )
+            .join('');
+          $('#results').classList.remove('hidden');
+        }
+
+        $('#variants').addEventListener('click', (event) => {
+          if (!event.target.classList.contains('remove')) return;
+          readInputs();
+          variants = variants.filter(
+            (variant) =>
+              variant.id !== event.target.closest('.variant-row').dataset.id,
+          );
+          renderVariants();
+          $('#results').classList.add('hidden');
+        });
+
+        $('#addVariant').addEventListener('click', () => {
+          readInputs();
+          if (variants.length >= 10) return;
+          variants.push({
+            id: id(),
+            name: `Variant ${String.fromCharCode(64 + variants.length)}`,
+            samples: 0,
+            conversions: 0,
+            isControl: false,
+          });
+          renderVariants();
+          $('#results').classList.add('hidden');
+        });
+
+        $('#calculate').addEventListener('click', () => {
+          readInputs();
+          const error = validate();
+          $('#error').textContent = error;
+          $('#error').style.display = error ? 'block' : 'none';
+          if (error) return;
+          const button = $('#calculate');
+          button.disabled = true;
+          button.textContent = 'Calculating…';
+          setTimeout(() => {
+            renderResults(calculateBayesianResults());
+            button.disabled = false;
+            button.textContent = 'Calculate';
+          }, 20);
+        });
+
+        $('#reset').addEventListener('click', () => {
+          variants = defaults();
+          $('#threshold').value = 95;
+          $('#error').style.display = 'none';
+          $('#results').classList.add('hidden');
+          renderVariants();
+        });
+
+        variants = defaults();
+        renderVariants();
+      })();
+    </script>
+  </body>
+</html>
